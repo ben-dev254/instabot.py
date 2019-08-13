@@ -347,7 +347,7 @@ class InstaBot:
                                 "Origin": "https://www.instagram.com",
                                 "User-Agent": self.user_agent,
                                 "X-Instagram-AJAX": "1",
-                                "Content-Type": "application/x-www-form-urlencoded",
+                                "Content-Type": "application/json",
                                 "x-requested-with": "XMLHttpRequest",
                             }
                         )
