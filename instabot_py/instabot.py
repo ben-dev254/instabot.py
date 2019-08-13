@@ -4,6 +4,7 @@
 
 import atexit
 import datetime
+from http import HTTPStatus
 import itertools
 import json
 import logging
@@ -297,7 +298,7 @@ class InstaBot:
             login = self.s.post(
                 self.url_login, data=self.login_post, allow_redirects=True
             )
-            if login.status_code not in (200, 400):
+            if login.status_code not in (HTTPStatus.OK, HTTPStatus.BAD_REQUEST):
                 # Handling Other Status Codes and making debug easier!!
                 self.logger.debug("Login Request didn't return 200 as status code!")
                 self.logger.debug(
@@ -371,7 +372,7 @@ class InstaBot:
 
                         # Request instagram to send a code
                         challenge_request_code = clg.post(
-                            challenge_url, data=challenge_post, allow_redirects=True
+                            challenge_url, json=challenge_post, allow_redirects=True
                         )
 
                         # User should receive a code soon, ask for it
@@ -387,14 +388,14 @@ class InstaBot:
                             data=challenge_security_post,
                             allow_redirects=True,
                         )
-                        if complete_challenge.status_code != 200:
+                        if complete_challenge.status_code != HTTPStatus.OK:
                             self.logger.info("Entered code is wrong, Try again later!")
                             return
                         self.csrftoken = complete_challenge.cookies["csrftoken"]
                         self.s.headers.update(
                             {"X-CSRFToken": self.csrftoken, "X-Instagram-AJAX": "1"}
                         )
-                        successfulLogin = complete_challenge.status_code == 200
+                        successfulLogin = complete_challenge.status_code == HTTPStatus.OK
 
                 except Exception as err:
                     self.logger.debug(f"Login failed, response: \n\n{login.text} {err}")
@@ -622,13 +623,13 @@ class InstaBot:
             logging.exception(exc)
             return None
 
-        if resp.status_code == 200:
+        if resp.status_code == HTTPStatus.OK:
             self.persistence.update_media_complete(media_id)
             self.unlike_counter += 1
             self.logger.info(
                 f"Media Unliked: # {self.unlike_counter} id: {media_id}, url: {self.get_media_url(media_id)}")
             return True
-        elif resp.status_code == 400 and resp.text == 'missing media':
+        elif resp.status_code == HTTPStatus.BAD_REQUEST and resp.text == 'missing media':
             self.persistence.update_media_complete(media_id)
             self.logger.info(
                 f"Could not unlike media: id: {media_id}, url: {self.get_media_url(media_id)}. It seems "
@@ -649,7 +650,7 @@ class InstaBot:
             logging.exception(exc)
             return False
 
-        if resp.status_code == 200:
+        if resp.status_code == HTTPStatus.OK:
             self.comments_counter += 1
             self.logger.info(f"Comment: {comment_text}. #{self.comments_counter}.")
             return True
@@ -662,7 +663,7 @@ class InstaBot:
                 username = self.get_username_by_user_id(user_id=user_id)
             try:
                 resp = self.s.post(url_follow)
-                if resp.status_code == 200:
+                if resp.status_code == HTTPStatus.OK:
                     self.follow_counter += 1
                     self.logger.info(f"Followed: {self.url_user(username)} #{self.follow_counter}.")
                     self.persistence.insert_username(user_id=user_id, username=username)
@@ -680,7 +681,7 @@ class InstaBot:
             logging.exception(exc)
             return False
 
-        if resp.status_code == 200:
+        if resp.status_code == HTTPStatus.OK:
             self.unfollow_counter += 1
             self.logger.info(f"Unfollowed: {self.url_user(username)} #{self.unfollow_counter}.")
             self.persistence.insert_unfollow_count(user_id=user_id)
